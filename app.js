@@ -53,7 +53,7 @@ async function loadClasses() {
 
   if (emptyState) emptyState.style.display = 'none';
 
-  // 1. Update Hero Circle badge
+  // 1. Update Hero Circle badge with 12-hour format
   const nextClass = classes[0];
   const className = nextClass.name || nextClass.title || nextClass.subject || 'Class';
   const displayTime = nextClass.time || nextClass.start_time || '--:--';
@@ -106,14 +106,16 @@ async function handleAddClass(event) {
   const formattedTime = formatTo12Hour(rawTime);
   const selectedDayValue = daySelect ? daySelect.value : '1';
   const selectedDayInt = parseInt(selectedDayValue, 10);
+  const nameVal = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'Class';
+  const locVal = (locationInput && locationInput.value.trim()) ? locationInput.value.trim() : 'TBA';
 
-  // Send both 'time' and 'start_time' along with 'day' and 'day_of_week'
+  // Fully populated payload mapping all primary keys to non-null values
   const newClass = {
-    name: nameInput ? nameInput.value : 'Class',
-    title: nameInput ? nameInput.value : 'Class',
-    subject: nameInput ? nameInput.value : 'Class',
-    location: locationInput ? locationInput.value : '',
-    room: locationInput ? locationInput.value : '',
+    name: nameVal,
+    title: nameVal,
+    subject: nameVal,
+    location: locVal,
+    room: locVal,
     day: selectedDayInt,
     day_of_week: selectedDayInt,
     time: formattedTime,
