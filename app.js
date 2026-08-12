@@ -4,7 +4,7 @@
 const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
 
-// Create a standalone instance attached to window to prevent override
+// Create a standalone instance attached to window
 window.spClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -29,9 +29,7 @@ function formatTo12Hour(timeStr) {
 async function loadClasses() {
   const { data: classes, error } = await window.spClient
     .from('classes')
-    .select('*')
-    .order('day_of_week', { ascending: true })
-    .order('start_time', { ascending: true });
+    .select('*');
 
   if (error) {
     console.error('Error fetching classes:', error.message);
@@ -68,7 +66,8 @@ async function loadClasses() {
     scheduleGrid.innerHTML = classes.map(cls => {
       const name = cls.name || cls.title || cls.subject || 'Class';
       const loc = cls.location || cls.room || 'TBA';
-      const dayName = cls.day_of_week !== undefined && cls.day_of_week !== null ? DAYS[cls.day_of_week] : '';
+      const dayVal = cls.day !== undefined ? cls.day : cls.day_of_week;
+      const dayName = dayVal !== undefined && dayVal !== null ? (DAYS[dayVal] || dayVal) : '';
 
       return `
         <div class="class-card" style="border: 1px dashed #4a6b57; padding: 14px; margin-bottom: 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
@@ -102,14 +101,17 @@ async function handleAddClass(event) {
 
   const rawTime = timeInput.value;
   const formattedTime = formatTo12Hour(rawTime);
+  const selectedDay = daySelect ? parseInt(daySelect.value, 10) : 1;
 
+  // Sends 'day' along with 'day_of_week' so Supabase constraint passes
   const newClass = {
+    day: selectedDay,
+    day_of_week: selectedDay,
     name: nameInput ? nameInput.value : 'Class',
     title: nameInput ? nameInput.value : 'Class',
     subject: nameInput ? nameInput.value : 'Class',
     location: locationInput ? locationInput.value : '',
     room: locationInput ? locationInput.value : '',
-    day_of_week: daySelect ? parseInt(daySelect.value, 10) : 1,
     start_time: formattedTime
   };
 
