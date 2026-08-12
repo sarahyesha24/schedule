@@ -1,267 +1,126 @@
-const { createClient } = supabase;
-const db = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+// ==========================================
+// CONFIGURATION - SUPABASE KEYS
+// ==========================================
+const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const RING_CIRCUMFERENCE = 2 * Math.PI * 88;
+// Initialize Supabase Client (uses window.supabase from CDN)
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const form = document.getElementById("classForm");
-const grid = document.getElementById("scheduleGrid");
-const emptyState = document.getElementById("emptyState");
-const notifyBtn = document.getElementById("notifyBtn");
-const toast = document.getElementById("toast");
+// ==========================================
+// TIME CONVERT HELPER (24-hour -> 12-hour AM/PM)
+// ==========================================
+function formatTo12Hour(timeStr) {
+  if (!timeStr || timeStr === '--:--') return '--:--';
+  if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
 
-let classes = [];
-
-// ---------- Toast ----------
-
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add("visible");
-  setTimeout(() => toast.classList.remove("visible"), 2600);
+  let [hours, minutes] = timeStr.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12; // Converts 0/12 to 12
+  
+  return `${hours}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
-// ---------- Data ----------
-
+// ==========================================
+// UI & DISPLAY FUNCTIONS
+// ==========================================
 async function loadClasses() {
-  const { data, error } = await db
-    .from("classes")
-    .select("*")
-    .order("day", { ascending: true })
-    .order("time", { ascending: true });
+  const { data: classes, error } = await supabase
+    .from('classes')
+    .select('*')
+    .order('start_time', { ascending: true });
 
   if (error) {
-    showToast("Couldn't load your schedule — check config.js");
-    console.error(error);
-    return;
-  }
-  classes = data || [];
-  renderSchedule();
-  renderHero();
-}
-
-async function addClass(payload) {
-  const { error } = await db.from("classes").insert(payload);
-  if (error) {
-    showToast("Couldn't save that class");
-    console.error(error);
-    return false;
-  }
-  return true;
-}
-
-async function removeClass(id) {
-  const { error } = await db.from("classes").delete().eq("id", id);
-  if (error) {
-    showToast("Couldn't remove that class");
-    console.error(error);
-    return;
-  }
-  classes = classes.filter((c) => c.id !== id);
-  renderSchedule();
-  renderHero();
-}
-
-// ---------- Rendering: schedule board ----------
-
-function renderSchedule() {
-  grid.innerHTML = "";
-
-  if (classes.length === 0) {
-    emptyState.classList.add("visible");
-    return;
-  }
-  emptyState.classList.remove("visible");
-
-  const today = new Date().getDay();
-
-  classes.forEach((cls) => {
-    const card = document.createElement("div");
-    card.className = "day-card" + (cls.day === today ? " today" : "");
-
-    card.innerHTML = `
-      <div class="day-card-main">
-        <span class="day-card-day">${DAY_NAMES[cls.day]}</span>
-        <span class="day-card-name">${escapeHTML(cls.name)}</span>
-        <span class="day-card-meta">${cls.time}${cls.location ? " · " + escapeHTML(cls.location) : ""}</span>
-      </div>
-      <button class="remove-btn" title="Remove" aria-label="Remove ${escapeHTML(cls.name)}">✕</button>
-    `;
-
-    card.querySelector(".remove-btn").addEventListener("click", () => removeClass(cls.id));
-    grid.appendChild(card);
-  });
-}
-
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// ---------- Rendering: hero countdown ----------
-
-function nextOccurrence(cls, now) {
-  const [h, m] = cls.time.split(":").map(Number);
-  const target = new Date(now);
-  target.setSeconds(0, 0);
-  const dayDiff = (cls.day - now.getDay() + 7) % 7;
-  target.setDate(now.getDate() + dayDiff);
-  target.setHours(h, m, 0, 0);
-  if (target < now) target.setDate(target.getDate() + 7);
-  return target;
-}
-
-function renderHero() {
-  const heroEyebrow = document.getElementById("heroEyebrow");
-  const ringTime = document.getElementById("ringTime");
-  const ringLabel = document.getElementById("ringLabel");
-  const heroSub = document.getElementById("heroSub");
-  const ringFill = document.getElementById("ringFill");
-
-  ringFill.style.strokeDasharray = RING_CIRCUMFERENCE;
-
-  if (classes.length === 0) {
-    heroEyebrow.textContent = "no classes on the board yet";
-    ringTime.textContent = "--:--";
-    ringLabel.textContent = "add your first class";
-    heroSub.textContent = "Alerts fire 30 minutes before roll call.";
-    ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+    console.error('Error fetching classes:', error.message);
     return;
   }
 
-  const now = new Date();
-  let next = null;
-  let nextTarget = null;
+  const circleDisplay = document.querySelector('section main, header div span:last-child, .circle-time');
+  const boardContainer = document.querySelector('.board, main section:last-of-type div');
 
-  classes.forEach((cls) => {
-    const t = nextOccurrence(cls, now);
-    if (!nextTarget || t < nextTarget) {
-      nextTarget = t;
-      next = cls;
+  // Update Next Class in Circle Badge
+  if (circleDisplay && classes && classes.length > 0) {
+    const nextClassTime = classes[0].start_time;
+    circleDisplay.textContent = formatTo12Hour(nextClassTime);
+  }
+
+  // Render Schedule Board
+  if (boardContainer) {
+    if (!classes || classes.length === 0) {
+      boardContainer.innerHTML = '<p>Nothing pinned yet — your week starts blank.</p>';
+      return;
     }
-  });
 
-  const msAway = nextTarget - now;
-  const minsAway = Math.floor(msAway / 60000);
-  const hoursAway = Math.floor(minsAway / 60);
-  const daysAway = Math.floor(hoursAway / 24);
-
-  heroEyebrow.textContent = daysAway > 0 ? "coming up" : "next class today";
-  ringTime.textContent = next.time;
-  ringLabel.textContent = next.name;
-
-  if (daysAway > 0) {
-    heroSub.textContent = `${DAY_NAMES[next.day]} · ${daysAway} day${daysAway > 1 ? "s" : ""} away`;
-    ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
-    ringFill.classList.remove("urgent");
-  } else {
-    heroSub.textContent = hoursAway > 0
-      ? `${hoursAway}h ${minsAway % 60}m away`
-      : `${minsAway}m away`;
-    const windowMs = 3 * 60 * 60 * 1000;
-    const progress = Math.max(0, Math.min(1, 1 - msAway / windowMs));
-    ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
-    ringFill.classList.toggle("urgent", minsAway <= 30);
+    boardContainer.innerHTML = classes.map(cls => `
+      <div class="class-card" style="border: 1px solid #ccc; padding: 12px; margin-bottom: 8px; border-radius: 8px;">
+        <h3 style="margin: 0;">${cls.subject || cls.title || cls.class_name || 'Class'}</h3>
+        <p style="margin: 4px 0;"><strong>Time:</strong> ${formatTo12Hour(cls.start_time)}</p>
+        <p style="margin: 0;"><strong>Room:</strong> ${cls.room || 'TBA'}</p>
+      </div>
+    `).join('');
   }
 }
 
-// ---------- Push notifications ----------
+// ==========================================
+// ADD CLASS FORM HANDLER
+// ==========================================
+async function handleAddClass(event) {
+  event.preventDefault();
+  
+  const form = event.target;
+  const titleInput = form.querySelector('input[type="text"], input[name="subject"], input[name="title"]');
+  const timeInput = form.querySelector('input[type="time"]');
+  const roomInput = form.querySelector('input[name="room"]');
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
-}
-
-async function updateNotifyButton() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    notifyBtn.textContent = "Push not supported here";
-    notifyBtn.disabled = true;
-    return;
-  }
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
-  notifyBtn.textContent = sub ? "Alerts on" : "Turn on alerts";
-  notifyBtn.classList.toggle("active", !!sub);
-}
-
-async function enablePush() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    showToast("This browser doesn't support push notifications");
-    return;
-  }
-  if (!CONFIG.VAPID_PUBLIC_KEY || CONFIG.VAPID_PUBLIC_KEY.startsWith("YOUR-")) {
-    showToast("Add your VAPID public key to config.js first");
+  if (!timeInput || !timeInput.value) {
+    alert('Please select a valid time!');
     return;
   }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") {
-    showToast("Notifications blocked — enable them in browser settings");
-    return;
-  }
+  const rawTime = timeInput.value; // e.g. "13:30"
+  const formattedTime = formatTo12Hour(rawTime); // "1:30 PM"
 
-  const reg = await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY),
-    });
-  }
-
-  const { error } = await db.from("push_subscriptions").insert({
-    endpoint: sub.endpoint,
-    subscription: sub.toJSON(),
-  });
-
-  if (error && error.code !== "23505") {
-    showToast("Couldn't save subscription");
-    console.error(error);
-    return;
-  }
-
-  showToast("Alerts are on — 30 min heads up, coming right up");
-  updateNotifyButton();
-}
-
-notifyBtn.addEventListener("click", enablePush);
-
-// ---------- Form ----------
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fd = new FormData(form);
-  const payload = {
-    name: fd.get("name").trim(),
-    location: fd.get("location").trim(),
-    day: Number(fd.get("day")),
-    time: fd.get("time"),
+  const newClass = {
+    title: titleInput ? titleInput.value : 'New Class',
+    start_time: formattedTime,
+    room: roomInput ? roomInput.value : 'TBA'
   };
-  if (!payload.name || !payload.time) return;
 
-  const ok = await addClass(payload);
-  if (ok) {
+  const { error } = await supabase.from('classes').insert([newClass]);
+
+  if (error) {
+    alert('Failed to save class: ' + error.message);
+  } else {
     form.reset();
-    showToast("Pinned to the board");
     loadClasses();
   }
-});
-
-// ---------- Boot ----------
-
-async function init() {
-  if ("serviceWorker" in navigator) {
-    try {
-      await navigator.serviceWorker.register("service-worker.js");
-    } catch (err) {
-      console.error("Service worker registration failed:", err);
-    }
-  }
-  await loadClasses();
-  await updateNotifyButton();
-  setInterval(renderHero, 30000);
 }
 
-init();
+// ==========================================
+// NOTIFICATION PERMISSION REQUEST
+// ==========================================
+async function requestNotificationPermission() {
+  if ('Notification' in window) {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      console.log('Notification permission granted.');
+    }
+  }
+}
+
+// ==========================================
+// INITIALIZATION ON PAGE LOAD
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Load existing classes from database
+  loadClasses();
+
+  // Ask for notification permissions
+  requestNotificationPermission();
+
+  // Attach listener to Add Class form
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', handleAddClass);
+  }
+});
