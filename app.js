@@ -4,7 +4,7 @@
 const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
 
-// Create a standalone instance attached to window
+// Standalone Supabase client instance
 window.spClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -53,11 +53,12 @@ async function loadClasses() {
 
   if (emptyState) emptyState.style.display = 'none';
 
-  // 1. Update Hero Circle badge with 12-hour time format
+  // 1. Update Hero Circle badge
   const nextClass = classes[0];
   const className = nextClass.name || nextClass.title || nextClass.subject || 'Class';
+  const displayTime = nextClass.time || nextClass.start_time || '--:--';
   
-  if (ringTime) ringTime.textContent = formatTo12Hour(nextClass.start_time);
+  if (ringTime) ringTime.textContent = formatTo12Hour(displayTime);
   if (ringLabel) ringLabel.textContent = className;
   if (heroEyebrow) heroEyebrow.textContent = `next up: ${className}`;
 
@@ -66,8 +67,10 @@ async function loadClasses() {
     scheduleGrid.innerHTML = classes.map(cls => {
       const name = cls.name || cls.title || cls.subject || 'Class';
       const loc = cls.location || cls.room || 'TBA';
-      const dayVal = cls.day !== undefined ? cls.day : cls.day_of_week;
-      const dayName = dayVal !== undefined && dayVal !== null ? (DAYS[dayVal] || dayVal) : '';
+      const rawDay = cls.day !== undefined && cls.day !== null ? cls.day : cls.day_of_week;
+      const dayIndex = parseInt(rawDay, 10);
+      const dayName = !isNaN(dayIndex) && DAYS[dayIndex] ? DAYS[dayIndex] : (rawDay || '');
+      const timeVal = cls.time || cls.start_time || '';
 
       return `
         <div class="class-card" style="border: 1px dashed #4a6b57; padding: 14px; margin-bottom: 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
@@ -75,7 +78,7 @@ async function loadClasses() {
             <h3 style="margin: 0; font-size: 1.1rem; color: #e2f1e7;">${name}</h3>
             ${dayName ? `<span style="font-size: 0.8rem; background: #233a2d; padding: 2px 8px; border-radius: 12px; color: #8eb89b;">${dayName}</span>` : ''}
           </div>
-          <p style="margin: 4px 0; font-family: monospace; font-size: 0.95rem; color: #a3c9b0;">🕒 ${formatTo12Hour(cls.start_time)}</p>
+          <p style="margin: 4px 0; font-family: monospace; font-size: 0.95rem; color: #a3c9b0;">🕒 ${formatTo12Hour(timeVal)}</p>
           <p style="margin: 0; font-size: 0.85rem; color: #7a9e87;">📍 ${loc}</p>
         </div>
       `;
@@ -101,17 +104,19 @@ async function handleAddClass(event) {
 
   const rawTime = timeInput.value;
   const formattedTime = formatTo12Hour(rawTime);
-  const selectedDay = daySelect ? parseInt(daySelect.value, 10) : 1;
+  const selectedDayValue = daySelect ? daySelect.value : '1';
+  const selectedDayInt = parseInt(selectedDayValue, 10);
 
-  // Sends 'day' along with 'day_of_week' so Supabase constraint passes
+  // Send both 'time' and 'start_time' along with 'day' and 'day_of_week'
   const newClass = {
-    day: selectedDay,
-    day_of_week: selectedDay,
     name: nameInput ? nameInput.value : 'Class',
     title: nameInput ? nameInput.value : 'Class',
     subject: nameInput ? nameInput.value : 'Class',
     location: locationInput ? locationInput.value : '',
     room: locationInput ? locationInput.value : '',
+    day: selectedDayInt,
+    day_of_week: selectedDayInt,
+    time: formattedTime,
     start_time: formattedTime
   };
 
