@@ -44,7 +44,7 @@ async function deleteClass(id) {
   }
 }
 
-// Expose deleteClass globally so the onclick handler inside innerHTML can access it
+// Expose deleteClass globally
 window.deleteClass = deleteClass;
 
 // ==========================================
@@ -77,7 +77,7 @@ async function loadClasses() {
 
   if (emptyState) emptyState.style.display = 'none';
 
-  // 1. Update Hero Circle badge with 12-hour format
+  // 1. Update Hero Circle badge
   const nextClass = classes[0];
   const className = nextClass.name || nextClass.title || nextClass.subject || 'Class';
   const displayTime = nextClass.time || nextClass.start_time || '--:--';
@@ -86,7 +86,7 @@ async function loadClasses() {
   if (ringLabel) ringLabel.textContent = className;
   if (heroEyebrow) heroEyebrow.textContent = `next up: ${className}`;
 
-  // 2. Render cards onto the schedule grid (including X remove button)
+  // 2. Render cards onto the schedule grid
   if (scheduleGrid) {
     scheduleGrid.innerHTML = classes.map(cls => {
       const name = cls.name || cls.title || cls.subject || 'Class';
@@ -99,11 +99,13 @@ async function loadClasses() {
       return `
         <div class="class-card" style="position: relative; border: 1px dashed #4a6b57; padding: 14px; margin-bottom: 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
           <button 
+            type="button"
+            class="delete-btn"
             onclick="window.deleteClass('${cls.id}')" 
-            style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: #e57373; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; line-height: 1;"
+            style="position: absolute; top: 10px; right: 10px; background: #ff4d4d; color: #ffffff; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; cursor: pointer; padding: 2px 8px; z-index: 100;"
             title="Remove class"
-          >✕</button>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-right: 24px;">
+          >✕ Delete</button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-right: 80px;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #e2f1e7;">${name}</h3>
             ${dayName ? `<span style="font-size: 0.8rem; background: #233a2d; padding: 2px 8px; border-radius: 12px; color: #8eb89b;">${dayName}</span>` : ''}
           </div>
