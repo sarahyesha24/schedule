@@ -1,11 +1,8 @@
 // ==========================================
-// CONFIGURATION - SUPABASE KEYS
+// CONFIGURATION & INITIALIZATION
 // ==========================================
-const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
-
-// Initialize Supabase Client (uses window.supabase from CDN)
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Reuses existing 'supabase' or 'supabaseClient' initialized in config.js
+const db = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : window.supabase.createClient('https://uvgkckxaopvujeaegrsh.supabase.co', 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle'));
 
 // Days array for mapping day numbers
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -28,7 +25,7 @@ function formatTo12Hour(timeStr) {
 // UI & DISPLAY FUNCTIONS
 // ==========================================
 async function loadClasses() {
-  const { data: classes, error } = await supabase
+  const { data: classes, error } = await db
     .from('classes')
     .select('*')
     .order('day_of_week', { ascending: true })
@@ -106,7 +103,6 @@ async function handleAddClass(event) {
   const rawTime = timeInput.value; // e.g. "13:30"
   const formattedTime = formatTo12Hour(rawTime); // "1:30 PM"
 
-  // Saves using all possible field variations so it works with any schema
   const newClass = {
     name: nameInput ? nameInput.value : 'Class',
     title: nameInput ? nameInput.value : 'Class',
@@ -117,10 +113,11 @@ async function handleAddClass(event) {
     start_time: formattedTime
   };
 
-  const { error } = await supabase.from('classes').insert([newClass]);
+  const { error } = await db.from('classes').insert([newClass]);
 
   if (error) {
     alert('Failed to save class: ' + error.message);
+    console.error(error);
   } else {
     event.target.reset();
     loadClasses();
@@ -134,7 +131,7 @@ async function requestNotificationPermission() {
   if ('Notification' in window) {
     const perm = await Notification.requestPermission();
     if (perm === 'granted') {
-      console.log('Notification permission granted.');
+      alert('Notifications turned on!');
     }
   }
 }
@@ -143,16 +140,13 @@ async function requestNotificationPermission() {
 // INITIALIZATION ON PAGE LOAD
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Load existing classes from database
   loadClasses();
 
-  // Attach listener to Notification Button
   const notifyBtn = document.getElementById('notifyBtn');
   if (notifyBtn) {
     notifyBtn.addEventListener('click', requestNotificationPermission);
   }
 
-  // Attach listener to Add Class form
   const form = document.getElementById('classForm') || document.querySelector('form');
   if (form) {
     form.addEventListener('submit', handleAddClass);
