@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ClassPulse — your schedule, pinged early</title>
+<meta name="theme-color" content="#16241C" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.svg" />
+<link rel="apple-touch-icon" href="icons/icon-192.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="board-texture" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">✦</span>
+    <span class="brand-name">ClassPulse</span>
+  </div>
+  <button id="notifyBtn" class="chalk-btn small">Turn on alerts</button>
+</header>
+
+<main>
+  <!-- HERO: next class countdown -->
+  <section class="hero" id="hero">
+    <p class="hero-eyebrow" id="heroEyebrow">no classes on the board yet</p>
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 200 200" id="ring">
+        <circle class="ring-track" cx="100" cy="100" r="88"></circle>
+        <circle class="ring-fill" id="ringFill" cx="100" cy="100" r="88"></circle>
+      </svg>
+      <div class="ring-center">
+        <span class="ring-time" id="ringTime">--:--</span>
+        <span class="ring-label" id="ringLabel">add your first class</span>
+      </div>
+    </div>
+    <p class="hero-sub" id="heroSub">Alerts fire 30 minutes before roll call.</p>
+  </section>
+
+  <!-- ADD CLASS -->
+  <section class="add-card">
+    <h2>Chalk one in</h2>
+    <form id="classForm">
+      <div class="field">
+        <label for="name">Class</label>
+        <input id="name" name="name" type="text" placeholder="Organic Chemistry" required />
+      </div>
+      <div class="field">
+        <label for="location">Location <span class="optional">(optional)</span></label>
+        <input id="location" name="location" type="text" placeholder="Hayden Hall 210" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="day">Day</label>
+          <select id="day" name="day" required>
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+            <option value="0">Sunday</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="time">Start time</label>
+          <input id="time" name="time" type="time" required />
+        </div>
+      </div>
+      <button type="submit" class="chalk-btn">Pin to schedule</button>
+    </form>
+  </section>
+
+  <!-- SCHEDULE BOARD -->
+  <section class="schedule">
+    <h2>The board</h2>
+    <div id="scheduleGrid" class="schedule-grid">
+      <!-- day columns injected by app.js -->
+    </div>
+    <p class="empty-state" id="emptyState">Nothing pinned yet — your week starts blank.</p>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
