@@ -1,8 +1,11 @@
 // ==========================================
-// CONFIGURATION & INITIALIZATION
+// DIRECT SUPABASE INITIALIZATION
 // ==========================================
-// Reuses existing 'supabase' or 'supabaseClient' initialized in config.js
-const db = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : window.supabase.createClient('https://uvgkckxaopvujeaegrsh.supabase.co', 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle'));
+const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
+
+// Initialize dedicated client instance
+const supabaseApp = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Days array for mapping day numbers
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -25,7 +28,7 @@ function formatTo12Hour(timeStr) {
 // UI & DISPLAY FUNCTIONS
 // ==========================================
 async function loadClasses() {
-  const { data: classes, error } = await db
+  const { data: classes, error } = await supabaseApp
     .from('classes')
     .select('*')
     .order('day_of_week', { ascending: true })
@@ -113,7 +116,7 @@ async function handleAddClass(event) {
     start_time: formattedTime
   };
 
-  const { error } = await db.from('classes').insert([newClass]);
+  const { error } = await supabaseApp.from('classes').insert([newClass]);
 
   if (error) {
     alert('Failed to save class: ' + error.message);
