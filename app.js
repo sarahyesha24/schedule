@@ -24,6 +24,30 @@ function formatTo12Hour(timeStr) {
 }
 
 // ==========================================
+// DELETE CLASS HANDLER
+// ==========================================
+async function deleteClass(id) {
+  if (!id) return;
+  
+  if (confirm('Are you sure you want to delete this class?')) {
+    const { error } = await window.spClient
+      .from('classes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Failed to delete class: ' + error.message);
+      console.error(error);
+    } else {
+      loadClasses();
+    }
+  }
+}
+
+// Expose deleteClass globally so the onclick handler inside innerHTML can access it
+window.deleteClass = deleteClass;
+
+// ==========================================
 // FETCH & RENDER CLASSES
 // ==========================================
 async function loadClasses() {
@@ -62,7 +86,7 @@ async function loadClasses() {
   if (ringLabel) ringLabel.textContent = className;
   if (heroEyebrow) heroEyebrow.textContent = `next up: ${className}`;
 
-  // 2. Render cards onto the schedule grid
+  // 2. Render cards onto the schedule grid (including X remove button)
   if (scheduleGrid) {
     scheduleGrid.innerHTML = classes.map(cls => {
       const name = cls.name || cls.title || cls.subject || 'Class';
@@ -73,8 +97,13 @@ async function loadClasses() {
       const timeVal = cls.time || cls.start_time || '';
 
       return `
-        <div class="class-card" style="border: 1px dashed #4a6b57; padding: 14px; margin-bottom: 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <div class="class-card" style="position: relative; border: 1px dashed #4a6b57; padding: 14px; margin-bottom: 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
+          <button 
+            onclick="window.deleteClass('${cls.id}')" 
+            style="position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: #e57373; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; line-height: 1;"
+            title="Remove class"
+          >✕</button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-right: 24px;">
             <h3 style="margin: 0; font-size: 1.1rem; color: #e2f1e7;">${name}</h3>
             ${dayName ? `<span style="font-size: 0.8rem; background: #233a2d; padding: 2px 8px; border-radius: 12px; color: #8eb89b;">${dayName}</span>` : ''}
           </div>
@@ -109,7 +138,6 @@ async function handleAddClass(event) {
   const nameVal = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'Class';
   const locVal = (locationInput && locationInput.value.trim()) ? locationInput.value.trim() : 'TBA';
 
-  // Fully populated payload mapping all primary keys to non-null values
   const newClass = {
     name: nameVal,
     title: nameVal,
