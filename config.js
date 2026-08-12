@@ -4,7 +4,7 @@
 //   (vapidkeys.com) — safe to expose in frontend code.
 
 const CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT-REF.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR-ANON-KEY",
+  SUPABASE_URL: "https://uvgkckxaopvujeaegrsh.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle",
   VAPID_PUBLIC_KEY: "YOUR-VAPID-PUBLIC-KEY",
 };
