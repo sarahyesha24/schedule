@@ -1,13 +1,12 @@
 // ==========================================
-// DIRECT SUPABASE INITIALIZATION
+// DIRECT SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://uvgkckxaopvujeaegrsh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Xj58FH2kvbXftUgp5JBuPA_VLp8vQle';
 
-// Initialize dedicated client instance
-const supabaseApp = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Create a standalone instance attached to window to prevent override
+window.spClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Days array for mapping day numbers
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // ==========================================
@@ -19,16 +18,16 @@ function formatTo12Hour(timeStr) {
 
   let [hours, minutes] = timeStr.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12; // Converts 0/12 to 12
+  hours = hours % 12 || 12;
   
   return `${hours}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
 // ==========================================
-// UI & DISPLAY FUNCTIONS
+// FETCH & RENDER CLASSES
 // ==========================================
 async function loadClasses() {
-  const { data: classes, error } = await supabaseApp
+  const { data: classes, error } = await window.spClient
     .from('classes')
     .select('*')
     .order('day_of_week', { ascending: true })
@@ -39,7 +38,6 @@ async function loadClasses() {
     return;
   }
 
-  // Exact elements from your HTML index
   const ringTime = document.getElementById('ringTime');
   const ringLabel = document.getElementById('ringLabel');
   const heroEyebrow = document.getElementById('heroEyebrow');
@@ -55,10 +53,9 @@ async function loadClasses() {
     return;
   }
 
-  // Hide empty state paragraph
   if (emptyState) emptyState.style.display = 'none';
 
-  // 1. Update the Big Hero Circle with the upcoming/first class
+  // 1. Update Hero Circle badge with 12-hour time format
   const nextClass = classes[0];
   const className = nextClass.name || nextClass.title || nextClass.subject || 'Class';
   
@@ -66,7 +63,7 @@ async function loadClasses() {
   if (ringLabel) ringLabel.textContent = className;
   if (heroEyebrow) heroEyebrow.textContent = `next up: ${className}`;
 
-  // 2. Render schedule cards into #scheduleGrid
+  // 2. Render cards onto the schedule grid
   if (scheduleGrid) {
     scheduleGrid.innerHTML = classes.map(cls => {
       const name = cls.name || cls.title || cls.subject || 'Class';
@@ -88,7 +85,7 @@ async function loadClasses() {
 }
 
 // ==========================================
-// ADD CLASS FORM HANDLER
+// ADD CLASS FORM SUBMIT HANDLER
 // ==========================================
 async function handleAddClass(event) {
   event.preventDefault();
@@ -103,8 +100,8 @@ async function handleAddClass(event) {
     return;
   }
 
-  const rawTime = timeInput.value; // e.g. "13:30"
-  const formattedTime = formatTo12Hour(rawTime); // "1:30 PM"
+  const rawTime = timeInput.value;
+  const formattedTime = formatTo12Hour(rawTime);
 
   const newClass = {
     name: nameInput ? nameInput.value : 'Class',
@@ -116,7 +113,7 @@ async function handleAddClass(event) {
     start_time: formattedTime
   };
 
-  const { error } = await supabaseApp.from('classes').insert([newClass]);
+  const { error } = await window.spClient.from('classes').insert([newClass]);
 
   if (error) {
     alert('Failed to save class: ' + error.message);
@@ -128,26 +125,19 @@ async function handleAddClass(event) {
 }
 
 // ==========================================
-// NOTIFICATION PERMISSION REQUEST
-// ==========================================
-async function requestNotificationPermission() {
-  if ('Notification' in window) {
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') {
-      alert('Notifications turned on!');
-    }
-  }
-}
-
-// ==========================================
-// INITIALIZATION ON PAGE LOAD
+// PAGE INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   loadClasses();
 
   const notifyBtn = document.getElementById('notifyBtn');
   if (notifyBtn) {
-    notifyBtn.addEventListener('click', requestNotificationPermission);
+    notifyBtn.addEventListener('click', async () => {
+      if ('Notification' in window) {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') alert('Notifications turned on!');
+      }
+    });
   }
 
   const form = document.getElementById('classForm') || document.querySelector('form');
